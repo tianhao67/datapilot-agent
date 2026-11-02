@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "datapilot-nl2sql"
+version = "0.1.0"
+description = "DataPilot: a zero-dependency NL2SQL data analysis agent with a SQL sandbox and offline evaluation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Tian Hao" }]
+keywords = ["nl2sql", "llm", "agent", "sqlite", "ollama"]
+
+[project.scripts]
+datapilot = "datapilot.cli:main"
+
+[tool.setuptools]
+packages = ["datapilot"]

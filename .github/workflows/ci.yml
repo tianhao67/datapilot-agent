@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build demo database
+        run: python scripts/build_db.py
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Byte-compile
+        run: python -m compileall -q datapilot web scripts

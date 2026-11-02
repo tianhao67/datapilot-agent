@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataPilot · 自然语言查数 Agent</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#f5f7fb; --card:#fff; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --accent:#2563eb; --accent-2:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 20px 60px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom: 22px; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .logo { width:38px; height:38px; border-radius:11px; background:linear-gradient(135deg,#2563eb,#7c3aed); color:#fff; display:grid; place-items:center; font-weight:800; font-size:18px; }
+  h1 { font-size:22px; margin:0; letter-spacing:.2px; }
+  .sub { color:var(--muted); font-size:13px; margin-top:3px; }
+  .badge { font-size:12px; color:#1e40af; background:#dbeafe; border:1px solid #bfdbfe; padding:5px 10px; border-radius:999px; white-space:nowrap; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:0 8px 28px rgba(17,24,39,.05); }
+  .ask { padding:22px; }
+  .ask label { font-size:13px; color:var(--muted); display:block; margin-bottom:8px; }
+  .row { display:flex; gap:10px; }
+  input[type=text] { flex:1; border:1px solid #d1d5db; border-radius:10px; padding:12px 14px; font-size:15px; outline:none; }
+  input[type=text]:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+  button { border:0; border-radius:10px; padding:12px 20px; background:var(--accent); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  button:hover { background:var(--accent-2); }
+  button:disabled { opacity:.6; cursor:wait; }
+  .examples { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .chip { font-size:12px; color:#374151; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:999px; padding:6px 10px; cursor:pointer; }
+  .chip:hover { background:#eef2ff; border-color:#c7d2fe; }
+  #status { margin:18px 2px 0; font-size:13px; color:var(--muted); min-height:18px; }
+  #result { margin-top:18px; display:none; }
+  .answer { padding:20px 22px; border-bottom:1px solid var(--line); }
+  .answer .kicker { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+  .answer .text { font-size:17px; line-height:1.6; margin-top:6px; font-weight:600; }
+  .meta { display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; color:var(--muted); font-size:12px; }
+  .meta b { color:var(--ink); font-weight:600; }
+  .section { padding:18px 22px; border-bottom:1px solid var(--line); }
+  .section:last-child { border-bottom:0; }
+  .section h2 { font-size:13px; color:var(--muted); margin:0 0 10px; font-weight:600; letter-spacing:.04em; }
+  pre.sql { margin:0; background:#0f172a; color:#e2e8f0; border-radius:10px; padding:14px 16px; overflow:auto; font-size:12.5px; line-height:1.55; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; background:#f9fafb; }
+  td { font-variant-numeric: tabular-nums; }
+  .metric { font-size:40px; font-weight:800; color:var(--accent); }
+  .metric-label { color:var(--muted); font-size:13px; margin-top:4px; }
+  .chart-wrap { position:relative; height:300px; }
+  .trace { font-size:12px; color:var(--muted); }
+  .trace div { padding:6px 0; border-bottom:1px dashed #e5e7eb; }
+  .err { padding:18px 22px; color:#b91c1c; background:#fef2f2; border-top:1px solid #fecaca; border-radius:0 0 16px 16px; }
+  footer { color:#9ca3af; font-size:12px; text-align:center; margin-top:22px; }
+  code { background:#f3f4f6; padding:1px 5px; border-radius:4px; }
+  @media (max-width:640px) { .row { flex-direction:column; } h1 { font-size:19px; } .badge { display:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">D</div>
+      <div>
+        <h1>DataPilot</h1>
+        <div class="sub">自然语言查数 Agent · SQL 沙箱 · 自纠错 · 可评测</div>
+      </div>
+    </div>
+    <div class="badge">Ollama 本地模型 · 零外部依赖</div>
+  </header>
+
+  <div class="card ask">
+    <label for="q">用中文问一个业务问题，Agent 会生成 SQL、执行并给出结果</label>
+    <div class="row">
+      <input id="q" type="text" placeholder="例如：2026 年 10 月的销售额是多少？" autocomplete="off">
+      <button id="run">查询</button>
+    </div>
+    <div class="examples" id="examples"></div>
+    <div id="status"></div>
+  </div>
+
+  <div id="result" class="card"></div>
+  <footer>DataPilot demo · SQLite 只读沙箱 · 结果仅用于演示</footer>
+</div>
+
+<script>
+const EXAMPLES = [
+  "2026 年 10 月的销售额是多少？",
+  "销售额最高的 5 个品类是哪些？",
+  "各城市的订单数是多少？",
+  "复购客户（至少 2 笔已支付订单）有多少人？",
+  "2026 年每个月的销售额趋势是怎样的？",
+  "小程序渠道销售额最高的品类是哪个？"
+];
+
+const $ = (id) => document.getElementById(id);
+let chart = null;
+
+EXAMPLES.forEach((text) => {
+  const el = document.createElement("span");
+  el.className = "chip";
+  el.textContent = text;
+  el.onclick = () => { $("q").value = text; ask(); };
+  $("examples").appendChild(el);
+});
+
+function fmt(v) {
+  if (typeof v === "number") return Number.isInteger(v) ? v.toLocaleString() : v.toLocaleString(undefined, {maximumFractionDigits: 4});
+  return v === null ? "NULL" : String(v);
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function renderTable(columns, rows) {
+  if (!columns.length) return "<p>没有返回列。</p>";
+  const head = columns.map(c => `<th>${esc(c)}</th>`).join("");
+  const body = rows.map(r => `<tr>${r.map(v => `<td>${esc(fmt(v))}</td>`).join("")}</tr>`).join("");
+  return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function renderChart(chartSpec, columns, rows) {
+  if (!window.Chart || !chartSpec || chartSpec.type === "table") return "";
+  if (chartSpec.type === "metric") {
+    return `<div class="metric">${esc(fmt(chartSpec.value))}</div><div class="metric-label">${esc(chartSpec.label)}</div>`;
+  }
+  return `<div class="chart-wrap"><canvas id="chart"></canvas></div>`;
+}
+
+function drawChart(spec, rows) {
+  if (!window.Chart || !spec || !["bar","line"].includes(spec.type)) return;
+  const canvas = $("chart");
+  if (!canvas) return;
+  if (chart) chart.destroy();
+  chart = new Chart(canvas, {
+    type: spec.type,
+    data: {
+      labels: rows.map(r => String(r[0])),
+      datasets: [{
+        label: spec.y,
+        data: rows.map(r => r[1]),
+        backgroundColor: spec.type === "bar" ? "rgba(37,99,235,.65)" : "rgba(37,99,235,.12)",
+        borderColor: "#2563eb",
+        borderWidth: 2,
+        fill: spec.type === "line",
+        tension: .28,
+        pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, grid: { color: "#eef2f7" } }, x: { grid: { display: false } } }
+    }
+  });
+}
+
+async function ask() {
+  const question = $("q").value.trim();
+  if (!question) return;
+  const btn = $("run");
+  btn.disabled = true;
+  $("status").textContent = "Agent 正在生成 SQL、执行并在失败时自纠错…";
+  $("result").style.display = "none";
+  try {
+    const resp = await fetch("/api/ask", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({question})
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      $("status").textContent = "";
+      $("result").style.display = "block";
+      $("result").innerHTML = `<div class="answer"><div class="kicker">查询失败</div><div class="text" style="color:#b91c1c">${esc(data.error || "未知错误")}</div></div>` +
+        (data.attempts && data.attempts.length ? `<div class="section"><h2>尝试记录</h2><div class="trace">${data.attempts.map(a => `<div><b>SQL:</b> <code>${esc(a.sql || "(空)")}</code><br><span>${esc(a.error || "")}</span></div>`).join("")}</div></div>` : "");
+      return;
+    }
+    $("status").textContent = "";
+    $("result").style.display = "block";
+    const chartHtml = renderChart(data.chart, data.columns, data.rows);
+    $("result").innerHTML = `
+      <div class="answer">
+        <div class="kicker">答案</div>
+        <div class="text">${esc(data.answer)}</div>
+        <div class="meta">
+          <span>尝试 <b>${data.attempts.length}</b> 次</span>
+          <span>延迟 <b>${data.latency_ms} ms</b></span>
+          <span>返回 <b>${data.rows.length}</b> 行</span>
+          <span>模型 <b>${esc(data.model || "LLM")}</b></span>
+        </div>
+      </div>
+      <div class="section"><h2>生成的 SQL</h2><pre class="sql">${esc(data.sql)}</pre></div>
+      <div class="section"><h2>结果</h2>${renderTable(data.columns, data.rows)}${chartHtml}</div>
+    `;
+    drawChart(data.chart, data.rows);
+  } catch (err) {
+    $("status").textContent = "";
+    $("result").style.display = "block";
+    $("result").innerHTML = `<div class="err">请求失败：${esc(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$("run").onclick = ask;
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter") ask(); });
+const preset = new URLSearchParams(location.search).get("q");
+if (preset) { $("q").value = preset; setTimeout(ask, 300); }
+</script>
+</body>
+</html>
