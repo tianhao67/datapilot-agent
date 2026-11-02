@@ -1,5 +1,9 @@
 # DataPilot · 自然语言数据分析 Agent
 
+[![CI](https://github.com/tianhao67/datapilot-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/tianhao67/datapilot-agent/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 > 用中文问业务问题，Agent 自动完成 **Schema 注入 → SQL 生成 → 只读沙箱执行 → 报错自纠错 → 表格/图表**。
 > 零第三方 Python 依赖：Python 标准库 + SQLite + Ollama / 任意 OpenAI 兼容接口。
 
@@ -54,6 +58,9 @@ flowchart LR
 ## 快速开始
 
 ```bash
+git clone https://github.com/tianhao67/datapilot-agent.git
+cd datapilot-agent
+
 # 1. 准备本地模型（二选一）
 ollama pull qwen2.5-coder:3b
 # 或使用 DeepSeek：export LLM_PROVIDER=openai OPENAI_API_KEY=sk-...
